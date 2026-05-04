@@ -339,10 +339,16 @@ function descFileEn(p, n) {
   return '';
 }
 
+// ══ PROJECT-SPECIFIC GUIDE — REPLACE THIS ENTIRE BLOCK ══
+// Replace with phase-based hardcoded content using mkS() / mkE().
+// Example: mkS(1,'path/to/file.ts','Description in Chinese')
 const GUIDE = {
-  zh: '<div class="flow-col"><h3>📋 关键文件一览</h3>'+buildGuide(DATA,'zh')+'</div><div class="flow-col"><h3>💡 使用提示</h3><div class="flow-note">上方列出了项目中自动识别出的<b>关键文件</b>及其作用。灰框节点在树状图中同样有标记。<br><br>使用 <b>搜索框</b> 可按文件名快速过滤，下拉列表中点击即可跳转。<br><br><b>Ctrl+F</b> 聚焦搜索 · <b>Esc</b> 清除 · <b>Ctrl+0</b> 重置视图。<br><br>点击任意文件节点可在编辑器中直接打开。</div></div>',
-  en: '<div class="flow-col"><h3>📋 Key Files Overview</h3>'+buildGuide(DATA,'en')+'</div><div class="flow-col"><h3>💡 Tips</h3><div class="flow-note">Above are auto-detected <b>key files</b> with their roles. Gray-bordered nodes in the tree are also marked.<br><br>Use the <b>search box</b> to filter by filename — click results in the dropdown to navigate.<br><br><b>Ctrl+F</b> focus search · <b>Esc</b> clear · <b>Ctrl+0</b> reset view.<br><br>Click any file node to open it directly in your editor.</div></div>'
+  zh: '<div class="flow-col"><h3>📋 Key Files</h3><div class="flow-note">Replace this placeholder with a phase-based guide after reading the project files.</div></div>',
+  en: '<div class="flow-col"><h3>📋 Key Files</h3><div class="flow-note">Replace this placeholder with a phase-based guide after reading the project files.</div></div>'
 };
+
+function mkS(n,p,d){return '<div class="flow-step"><span class="num">'+n+'</span><div><span class="file" onclick="navTo(\''+esc2(p)+'\')">'+esc2(p)+'</span><div class="desc">'+d+'</div></div></div>';}
+function mkE(n,p,d){return '<div class="flow-step"><span class="num">'+n+'</span><div><span class="file" onclick="navTo(\''+esc2(p)+'\')">'+esc2(p)+'</span><div class="desc">'+d+'</div></div></div>';}
 
 function buildGuide(nodes, lang) {
   const keyFiles = [];

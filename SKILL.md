@@ -25,13 +25,29 @@ Create a self-contained `structure.html` that shows a project's complete file tr
 
 3. Build a phase map based on the observed project, not a fixed web-app template. Common phases include orientation/docs, dependency/build setup, runtime entry points, domain/core logic, interfaces/adapters, data/storage/contracts, automation/testing/release, infrastructure/deployment, and examples/assets. For large repeated directories, summarize the directory instead of reading every near-identical file.
 
-4. Run the generator from the skill directory:
+4. **Copy, edit, run, delete — the agent does all of this automatically.**
 
-```bash
-python3 scripts/generate.py "<scanPath>" "<linkRoot>" "<outputDir>"
+```
+# ① Copy the clean generate.py into the project (DO NOT edit the original)
+SKILL_DIR = directory containing this SKILL.md
+cp "$SKILL_DIR/scripts/generate.py" "<outputDir>/_gen.py"
+
+# ② Edit <outputDir>/_gen.py:
+#    Search for:  const GUIDE = {
+#    There is a placeholder block with comment "REPLACE THIS ENTIRE BLOCK"
+#    Replace it entirely with your phase-based GUIDE from step 3
+#    Format:
+#      zh: [ '<div class="flow-col"><h3>🔷 阶段一：项目概览 (5)</h3>', mkS(1,'pkg.json','...'), '</div>', ... ].join('')
+#      en: [ ... same using mkE() ... ].join('')
+
+# ③ Run the copy
+python3 "<outputDir>/_gen.py" "<scanPath>" "<linkRoot>" "<outputDir>"
+
+# ④ Delete the copy
+rm "<outputDir>/_gen.py"
 ```
 
-If the agent is not currently in the skill directory, resolve `scripts/generate.py` relative to this `SKILL.md` and run it by absolute path.
+The original `scripts/generate.py` stays pristine. The agent handles all of this — the user never touches the script.
 
 5. Validate the result:
    - Confirm `<outputDir>/structure.html` exists.
