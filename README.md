@@ -1,208 +1,233 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python">
-  <img src="https://img.shields.io/badge/output-single%20HTML-green" alt="Output">
-  <img src="https://img.shields.io/badge/deps-none-brightgreen" alt="Deps">
-  <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="License">
+  <img src="https://img.shields.io/badge/skill-Agent%20Skills-black" alt="Agent Skills">
+  <img src="https://img.shields.io/badge/Claude%20Code-compatible-blue" alt="Claude Code">
+  <img src="https://img.shields.io/badge/Codex-compatible-green" alt="Codex">
+  <img src="https://img.shields.io/badge/OpenCode-compatible-purple" alt="OpenCode">
+  <img src="https://img.shields.io/badge/python-3.10%2B-lightgrey" alt="Python">
 </p>
 
-# Project Structure Viewer / 项目结构图生成器
+# Project Structure Viewer
 
-**One command → one HTML file → your entire codebase as an interactive horizontal tree map.**
+**一个可以装进 Claude Code、Codex、OpenCode 的 Agent Skill。**
 
-**一行命令 → 一个 HTML 文件 → 整个项目变成可交互的水平树状思维导图。**
+它的目标很简单：当你打开一个陌生项目时，不用先在几十个目录里迷路。让 agent 先读代码，再生成一个可交互的 `structure.html`，把项目目录、关键文件、阅读顺序和代码流转关系一次性展开。
 
-[English](#english) | [中文](#中文)
+This repository is skill-first. `SKILL.md` is the product; `generate.py` is the bundled helper script.
 
 ---
 
-## English
+## 这是什么
 
-### What It Does
+Project Structure Viewer 是一个基于 `SKILL.md` 的跨工具 skill 包，适合安装到支持 Agent Skills / SKILL.md 的 coding agent 中。
 
-You get a new codebase. Dozens of folders, hundreds of files. Where do you start?
+当你对 agent 说：
 
-Project Structure Viewer scans the entire directory and produces a **single, self-contained HTML file** that renders the complete project as a **left-to-right horizontal tree diagram** — like an org chart for your code.
+```text
+帮我理解这个项目结构
+生成这个仓库的结构图
+Show me the structure of this codebase
+Use project-structure-viewer on this repo
+```
 
-Every file is clickable — opens directly in your editor via `file://` links. No install, no dependencies, no build step.
+agent 会按 `SKILL.md` 的流程工作：
 
-### Features
+1. 读取项目的真实源码和配置，而不是只扫文件名
+2. 识别入口、路由、数据层、页面、组件、部署和文档等关键文件
+3. 生成分阶段的阅读路线图
+4. 调用 `generate.py` 输出单文件 HTML
+5. 告诉你 `structure.html` 在哪里打开
 
-- **Horizontal tree layout** — root on the left, each directory level expands to the right with elbow connector lines
-- **Pan & zoom** — drag to move, scroll to zoom (tuned for both mouse wheels and trackpads)
-- **Full-text search** — type to filter; dropdown shows matching files with paths, click to jump
-- **Expand / collapse** — click folders to drill down; "Expand All" / "Collapse" buttons
-- **Reading guide** — auto-detects key files (entry points, routers, schemas, pages) and describes each one's role
-- **Bilingual UI** — toggle between English and Chinese with one click
-- **Black background, white text** — minimal, clean, no distractions
-- **Zero dependencies** — the output is a single HTML file with embedded CSS and JS
+---
 
-### Quick Start
+## 能做什么
+
+- 完整项目树：从根目录向右展开的水平树状图
+- 阅读路线图：按阶段组织关键文件，而不是扔给你一坨平铺列表
+- 搜索与跳转：搜索文件名，点击结果定位节点
+- 展开与收起：快速看全局，也能逐层钻进去
+- 平移与缩放：适合大项目浏览
+- 点击打开文件：生成 `file://` 链接，方便跳回本机编辑器
+- 中英文界面：生成页面自带语言切换
+- 单文件输出：HTML 内嵌 CSS / JS，不需要前端构建
+
+---
+
+## 安装
+
+先把这个仓库克隆到一个稳定位置：
 
 ```bash
-git clone https://github.com/1m01m0/project-structure-viewer.git
-cd project-structure-viewer
-
-# Run against any project
-python3 generate.py ~/my-project ~/my-project ~/my-project
-
-# Open the result
-open ~/my-project/structure.html
+mkdir -p ~/agent-skills
+git clone https://github.com/1m01m0/project-structure-viewer.git \
+  ~/agent-skills/project-structure-viewer
 ```
 
-### Usage
+然后按你使用的工具放到对应的 skills 目录。目录结构必须是：
 
+```text
+<skills-dir>/project-structure-viewer/SKILL.md
 ```
+
+### Claude Code
+
+个人全局安装：
+
+```bash
+mkdir -p ~/.claude/skills
+ln -s ~/agent-skills/project-structure-viewer \
+  ~/.claude/skills/project-structure-viewer
+```
+
+项目内安装：
+
+```bash
+mkdir -p .claude/skills
+ln -s ~/agent-skills/project-structure-viewer \
+  .claude/skills/project-structure-viewer
+```
+
+### Codex
+
+Codex 的官方本地发现目录使用 Agent Skills 标准路径。
+
+个人全局安装：
+
+```bash
+mkdir -p ~/.agents/skills
+ln -s ~/agent-skills/project-structure-viewer \
+  ~/.agents/skills/project-structure-viewer
+```
+
+项目内安装：
+
+```bash
+mkdir -p .agents/skills
+ln -s ~/agent-skills/project-structure-viewer \
+  .agents/skills/project-structure-viewer
+```
+
+如果你使用 Codex 内置的 skill installer，也可以直接让 Codex 安装这个 GitHub 仓库目录。
+
+### OpenCode
+
+OpenCode 支持自己的 skills 目录，也会读取 Claude-compatible 和 agent-compatible skills 目录。也就是说，如果你已经装到 `~/.agents/skills` 或 `~/.claude/skills`，OpenCode 通常不需要重复安装。
+
+个人全局安装：
+
+```bash
+mkdir -p ~/.config/opencode/skills
+ln -s ~/agent-skills/project-structure-viewer \
+  ~/.config/opencode/skills/project-structure-viewer
+```
+
+项目内安装：
+
+```bash
+mkdir -p .opencode/skills
+ln -s ~/agent-skills/project-structure-viewer \
+  .opencode/skills/project-structure-viewer
+```
+
+可选的共享安装路径：
+
+```bash
+mkdir -p ~/.agents/skills
+ln -s ~/agent-skills/project-structure-viewer \
+  ~/.agents/skills/project-structure-viewer
+```
+
+---
+
+## 更新
+
+如果你按上面的方式克隆到 `~/agent-skills/project-structure-viewer`：
+
+```bash
+git -C ~/agent-skills/project-structure-viewer pull
+```
+
+如果你的 agent 在启动时扫描 skills，更新后重启一次 agent 最稳。
+
+---
+
+## 使用
+
+在任意代码项目里打开 Claude Code、Codex 或 OpenCode，然后直接描述你的意图：
+
+```text
+帮我理解这个项目结构，生成一个可交互的结构图
+```
+
+生成结果默认是：
+
+```text
+<your-project>/structure.html
+```
+
+用浏览器打开即可。页面里的文件节点会使用 `file://` 链接指向你的本机路径。
+
+---
+
+## 手动运行
+
+你也可以不通过 agent，直接运行脚本：
+
+```bash
 python3 generate.py <scanPath> <linkRoot> <outputDir>
 ```
 
-| Argument | Description |
-|----------|-------------|
-| `scanPath` | Directory to scan (filesystem path) |
-| `linkRoot` | Host path for `file://` links (usually same as scanPath) |
-| `outputDir` | Where to write `structure.html` (usually same as scanPath) |
+参数说明：
 
-### How It Works
+| 参数 | 说明 |
+| --- | --- |
+| `scanPath` | 要扫描的项目目录 |
+| `linkRoot` | 生成 `file://` 链接时使用的本机路径，通常和 `scanPath` 相同 |
+| `outputDir` | `structure.html` 的输出目录，不存在时会自动创建 |
 
-1. `os.listdir()` recursively walks the directory
-2. Files/dirs are sorted (dirs first, alphabetically)
-3. Ignore patterns filter out noise (node_modules, .git, etc.)
-4. Key files are auto-detected by name/path heuristics
-5. Compact JSON tree is embedded in the HTML
-6. JavaScript renders the horizontal tree with SVG connector lines, search, and interactions
-
-### Configuration
-
-Edit the `IGNORE` list in `generate.py` to customize filtered patterns:
-
-```python
-IGNORE = [
-    'node_modules', '.git', '__pycache__', '.pnpm',
-    '*.pyc', '*.pyo', '.DS_Store', 'Thumbs.db',
-    # ... add your own patterns
-]
-```
-
-Edit `flow_set()` to customize which files are highlighted as key files.
-
-### File Structure
-
-```
-project-structure-viewer/
-├── README.md          ← You are here
-├── SKILL.md           ← Codex skill definition
-├── generate.py        ← The generator script (all you need)
-└── LICENSE            ← MIT license
-```
-
-### Codex Skill
-
-Also available as a Codex skill. Install once, then say "help me understand this project" — the skill handles path resolution and generates the HTML automatically.
-
-### License
-
-MIT
-
----
-
-## 中文
-
-### 这是什么
-
-拿到一个新项目，几十个文件夹、几百个文件，从哪看起？
-
-项目结构图生成器扫描整个目录，生成一个**自包含的 HTML 文件**，以**从左到右的水平树状图**呈现完整的项目结构——就像代码的组织架构图。
-
-每个文件节点都可以点击，通过 `file://` 链接直接在编辑器中打开。无需安装，无依赖，无构建步骤。
-
-### 功能特性
-
-- **水平树状布局** — 根目录在左侧，每级目录向右延伸，父子节点用直角肘形连线
-- **拖拽平移 & 滚轮缩放** — 鼠标拖拽移动，滚轮缩放（已针对鼠标和触控板分别调优）
-- **全文搜索** — 输入即过滤，下拉列表显示匹配文件及路径，点击跳转
-- **展开 / 收起** — 点击文件夹展开子目录，提供「全部展开」「全部收起」按钮
-- **阅读路线图** — 自动识别关键文件（入口点、路由、数据模型、页面组件），逐一描述作用
-- **中英文切换** — 一键切换界面语言，阅读路线图内容同步翻译
-- **黑底白字** — 极简风格，无干扰
-- **零依赖** — 输出为单个 HTML 文件，CSS 和 JS 全部内嵌
-
-### 快速开始
+示例：
 
 ```bash
-git clone https://github.com/1m01m0/project-structure-viewer.git
-cd project-structure-viewer
-
-# 对任意项目运行
 python3 generate.py ~/my-project ~/my-project ~/my-project
-
-# 打开生成的文件
 open ~/my-project/structure.html
 ```
 
-### 用法
-
-```
-python3 generate.py <扫描路径> <链接根路径> <输出目录>
-```
-
-| 参数 | 说明 |
-|------|------|
-| `扫描路径` | 要扫描的目录（文件系统路径） |
-| `链接根路径` | `file://` 链接使用的主机路径（通常与扫描路径相同） |
-| `输出目录` | `structure.html` 的写入位置（通常与扫描路径相同） |
-
-如果脚本运行在沙箱/VM 环境中，扫描路径和链接路径可能不同：
+如果 agent 运行在沙箱或容器里，扫描路径和本机链接路径可能不同：
 
 ```bash
 python3 generate.py \
-  /sessions/abc/mnt/Desktop/myproject \
-  /Users/emo/Desktop/myproject \
-  /sessions/abc/mnt/Desktop/myproject
+  /sessions/abc/mnt/Desktop/my-project \
+  /Users/you/Desktop/my-project \
+  /sessions/abc/mnt/Desktop/my-project
 ```
-
-### 工作原理
-
-1. `os.listdir()` 递归遍历目录
-2. 文件/目录排序（目录优先，字母顺序）
-3. 忽略规则过滤噪声文件（node_modules、.git 等）
-4. 通过文件名/路径模式自动识别关键文件
-5. 将紧凑 JSON 树嵌入 HTML
-6. JavaScript 渲染水平树、SVG 连线、搜索和交互
-
-### 自定义配置
-
-编辑 `generate.py` 中的 `IGNORE` 列表来定制过滤规则：
-
-```python
-IGNORE = [
-    'node_modules', '.git', '__pycache__', '.pnpm',
-    '*.pyc', '*.pyo', '.DS_Store', 'Thumbs.db',
-    # ... 添加你自己的规则
-]
-```
-
-编辑 `flow_set()` 函数来自定义哪些文件被标记为关键文件。
-
-### 文件结构
-
-```
-project-structure-viewer/
-├── README.md          ← 你正在看
-├── SKILL.md           ← Codex 技能定义
-├── generate.py        ← 生成器脚本（唯一需要的文件）
-└── LICENSE            ← MIT 许可证
-```
-
-### Codex 技能
-
-同时支持作为 Codex 技能使用。安装一次后，说「帮我理解这个项目结构」即可自动生成。
-
-### 许可证
-
-MIT
 
 ---
 
-<p align="center">
-  <sub>Built for developers who open a new codebase and think "...where do I even start?"</sub><br>
-  <sub>为每次打开新项目不知道从哪看起的开发者而建</sub>
-</p>
+## 仓库结构
+
+```text
+project-structure-viewer/
+├── SKILL.md     # skill 入口，定义触发条件和工作流
+├── generate.py  # 生成自包含 HTML 的脚本
+├── README.md    # 安装与使用说明
+└── LICENSE      # MIT license
+```
+
+---
+
+## 兼容性说明
+
+这个仓库遵循 Agent Skills 的基本形态：一个包含 `SKILL.md` 的目录，可以携带脚本、参考资料和其他资源。
+
+相关文档：
+
+- [Agent Skills open standard](https://agentskills.io/)
+- [Claude Code skills](https://code.claude.com/docs/en/skills)
+- [Codex Agent Skills](https://developers.openai.com/codex/skills)
+- [OpenAI skills catalog for Codex](https://github.com/openai/skills)
+- [OpenCode Agent Skills](https://opencode.ai/docs/skills)
+
+---
+
+## License
+
+MIT
