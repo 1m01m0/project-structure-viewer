@@ -1,230 +1,178 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/skill-Agent%20Skills-black" alt="Agent Skills">
+  <img src="https://img.shields.io/badge/Agent%20Skills-standard-black" alt="Agent Skills">
+  <img src="https://img.shields.io/badge/npx%20skills-installable-green" alt="npx skills">
   <img src="https://img.shields.io/badge/Claude%20Code-compatible-blue" alt="Claude Code">
-  <img src="https://img.shields.io/badge/Codex-compatible-green" alt="Codex">
+  <img src="https://img.shields.io/badge/Codex-compatible-lightgrey" alt="Codex">
   <img src="https://img.shields.io/badge/OpenCode-compatible-purple" alt="OpenCode">
-  <img src="https://img.shields.io/badge/python-3.10%2B-lightgrey" alt="Python">
 </p>
 
 # Project Structure Viewer
 
-**一个可以装进 Claude Code、Codex、OpenCode 的 Agent Skill。**
+一个标准 Agent Skill：让 Claude Code、Codex、OpenCode 等 coding agent 先读项目，再生成可交互的 `structure.html` 项目结构图。
 
-它的目标很简单：当你打开一个陌生项目时，不用先在几十个目录里迷路。让 agent 先读代码，再生成一个可交互的 `structure.html`，把项目目录、关键文件、阅读顺序和代码流转关系一次性展开。
-
-This repository is skill-first. `SKILL.md` is the product; `generate.py` is the bundled helper script.
-
----
-
-## 这是什么
-
-Project Structure Viewer 是一个基于 `SKILL.md` 的跨工具 skill 包，适合安装到支持 Agent Skills / SKILL.md 的 coding agent 中。
-
-当你对 agent 说：
-
-```text
-帮我理解这个项目结构
-生成这个仓库的结构图
-Show me the structure of this codebase
-Use project-structure-viewer on this repo
-```
-
-agent 会按 `SKILL.md` 的流程工作：
-
-1. 读取项目的真实源码和配置，而不是只扫文件名
-2. 识别入口、路由、数据层、页面、组件、部署和文档等关键文件
-3. 生成分阶段的阅读路线图
-4. 调用 `generate.py` 输出单文件 HTML
-5. 告诉你 `structure.html` 在哪里打开
-
----
-
-## 能做什么
-
-- 完整项目树：从根目录向右展开的水平树状图
-- 阅读路线图：按阶段组织关键文件，而不是扔给你一坨平铺列表
-- 搜索与跳转：搜索文件名，点击结果定位节点
-- 展开与收起：快速看全局，也能逐层钻进去
-- 平移与缩放：适合大项目浏览
-- 点击打开文件：生成 `file://` 链接，方便跳回本机编辑器
-- 中英文界面：生成页面自带语言切换
-- 单文件输出：HTML 内嵌 CSS / JS，不需要前端构建
+它不是普通脚本仓库。`SKILL.md` 是入口，`scripts/generate.py` 是 skill 自带的确定性生成器。
 
 ---
 
 ## 安装
 
-先把这个仓库克隆到一个稳定位置：
+推荐用 `npx skills` 从 GitHub 安装：
 
 ```bash
-mkdir -p ~/agent-skills
-git clone https://github.com/1m01m0/project-structure-viewer.git \
-  ~/agent-skills/project-structure-viewer
+npx skills add 1m01m0/project-structure-viewer
 ```
 
-然后按你使用的工具放到对应的 skills 目录。目录结构必须是：
+只安装到指定 agent：
+
+```bash
+npx skills add 1m01m0/project-structure-viewer \
+  -a claude-code -a codex -a opencode
+```
+
+全局安装：
+
+```bash
+npx skills add 1m01m0/project-structure-viewer -g
+```
+
+先查看仓库里可安装的 skill：
+
+```bash
+npx skills add 1m01m0/project-structure-viewer --list
+```
+
+如果你不使用 `npx skills`，也可以手动 clone 后放到任一兼容目录：
 
 ```text
-<skills-dir>/project-structure-viewer/SKILL.md
+~/.claude/skills/project-structure-viewer/SKILL.md
+~/.agents/skills/project-structure-viewer/SKILL.md
+~/.config/opencode/skills/project-structure-viewer/SKILL.md
 ```
-
-### Claude Code
-
-个人全局安装：
-
-```bash
-mkdir -p ~/.claude/skills
-ln -s ~/agent-skills/project-structure-viewer \
-  ~/.claude/skills/project-structure-viewer
-```
-
-项目内安装：
-
-```bash
-mkdir -p .claude/skills
-ln -s ~/agent-skills/project-structure-viewer \
-  .claude/skills/project-structure-viewer
-```
-
-### Codex
-
-Codex 的官方本地发现目录使用 Agent Skills 标准路径。
-
-个人全局安装：
-
-```bash
-mkdir -p ~/.agents/skills
-ln -s ~/agent-skills/project-structure-viewer \
-  ~/.agents/skills/project-structure-viewer
-```
-
-项目内安装：
-
-```bash
-mkdir -p .agents/skills
-ln -s ~/agent-skills/project-structure-viewer \
-  .agents/skills/project-structure-viewer
-```
-
-如果你使用 Codex 内置的 skill installer，也可以直接让 Codex 安装这个 GitHub 仓库目录。
-
-### OpenCode
-
-OpenCode 支持自己的 skills 目录，也会读取 Claude-compatible 和 agent-compatible skills 目录。也就是说，如果你已经装到 `~/.agents/skills` 或 `~/.claude/skills`，OpenCode 通常不需要重复安装。
-
-个人全局安装：
-
-```bash
-mkdir -p ~/.config/opencode/skills
-ln -s ~/agent-skills/project-structure-viewer \
-  ~/.config/opencode/skills/project-structure-viewer
-```
-
-项目内安装：
-
-```bash
-mkdir -p .opencode/skills
-ln -s ~/agent-skills/project-structure-viewer \
-  .opencode/skills/project-structure-viewer
-```
-
-可选的共享安装路径：
-
-```bash
-mkdir -p ~/.agents/skills
-ln -s ~/agent-skills/project-structure-viewer \
-  ~/.agents/skills/project-structure-viewer
-```
-
----
-
-## 更新
-
-如果你按上面的方式克隆到 `~/agent-skills/project-structure-viewer`：
-
-```bash
-git -C ~/agent-skills/project-structure-viewer pull
-```
-
-如果你的 agent 在启动时扫描 skills，更新后重启一次 agent 最稳。
 
 ---
 
 ## 使用
 
-在任意代码项目里打开 Claude Code、Codex 或 OpenCode，然后直接描述你的意图：
+在任意项目里对 agent 说：
 
 ```text
-帮我理解这个项目结构，生成一个可交互的结构图
+帮我理解这个项目结构，生成一个可交互结构图
 ```
 
-生成结果默认是：
+或者：
 
 ```text
-<your-project>/structure.html
+Use project-structure-viewer to map this repository.
 ```
 
-用浏览器打开即可。页面里的文件节点会使用 `file://` 链接指向你的本机路径。
+skill 会要求 agent：
+
+1. 先读真实项目文件，而不是只扫文件名
+2. 判断项目类型和阅读阶段，不强行套前端/后端模板
+3. 调用 `scripts/generate.py`
+4. 生成 `<project>/structure.html`
+5. 返回结构图路径和简短项目导览
+
+生成出的 HTML 支持：
+
+- 左到右项目树
+- 展开 / 收起目录
+- 搜索文件并跳转
+- 平移 / 缩放
+- 中英文界面切换
+- `file://` 点击打开本机文件
+- 自动标记关键文件
 
 ---
 
-## 手动运行
+## 标准目录结构
 
-你也可以不通过 agent，直接运行脚本：
+这个仓库本身就是一个 skill 目录，符合 [Agent Skills](https://agentskills.io/home) 规范：
 
-```bash
-python3 generate.py <scanPath> <linkRoot> <outputDir>
+```text
+project-structure-viewer/
+├── SKILL.md                    # 必需：skill 元数据和工作流
+├── scripts/
+│   └── generate.py             # 可执行生成器脚本
+├── references/
+│   └── project-taxonomy.md     # 通用项目类型参考
+├── agents/
+│   └── openai.yaml             # Codex/OpenAI UI 元数据
+├── README.md
+├── LICENSE
+└── package.json
 ```
 
-参数说明：
+`npx skills` 会识别根目录的 `SKILL.md`，因此可以直接安装：
 
-| 参数 | 说明 |
-| --- | --- |
-| `scanPath` | 要扫描的项目目录 |
-| `linkRoot` | 生成 `file://` 链接时使用的本机路径，通常和 `scanPath` 相同 |
-| `outputDir` | `structure.html` 的输出目录，不存在时会自动创建 |
+```bash
+npx skills add 1m01m0/project-structure-viewer
+```
+
+---
+
+## 为什么更通用
+
+这个 skill 不再只围绕前后端项目组织阅读路径。它会提示 agent 根据实际仓库识别：
+
+- JavaScript / TypeScript 应用、库、monorepo
+- Python 包、CLI、服务、数据/ML 项目
+- Go / Rust / Java / Kotlin / Swift 项目
+- Flutter / React Native / 移动端项目
+- Terraform / Kubernetes / Helm / Docker 等基础设施仓库
+- 文档站、内容仓库、示例集合
+- 混合型 workspace
+
+核心原则是：先看 manifest、入口、配置、测试、自动化和核心模块，再生成结构图。
+
+---
+
+## 手动运行脚本
+
+通常不需要手动运行，agent 会按 `SKILL.md` 调用。需要调试时可以执行：
+
+```bash
+python3 scripts/generate.py <scanPath> <linkRoot> <outputDir>
+```
 
 示例：
 
 ```bash
-python3 generate.py ~/my-project ~/my-project ~/my-project
+python3 scripts/generate.py ~/my-project ~/my-project ~/my-project
 open ~/my-project/structure.html
 ```
 
-如果 agent 运行在沙箱或容器里，扫描路径和本机链接路径可能不同：
+参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `scanPath` | 要扫描的真实项目路径 |
+| `linkRoot` | HTML 里 `file://` 链接使用的本机路径，通常等于 `scanPath` |
+| `outputDir` | `structure.html` 输出目录，不存在时自动创建 |
+
+---
+
+## 和 fireworks-tech-graph 的关系
+
+`project-structure-viewer` 默认产出交互式 HTML 项目树，适合浏览代码库。
+
+如果你想要发布级 SVG/PNG 架构图、流程图或系统图，可以搭配：
 
 ```bash
-python3 generate.py \
-  /sessions/abc/mnt/Desktop/my-project \
-  /Users/you/Desktop/my-project \
-  /sessions/abc/mnt/Desktop/my-project
+npx skills add yizhiyanhua-ai/fireworks-tech-graph
 ```
+
+典型组合是：先用本 skill 生成项目结构和阅读阶段，再用 `fireworks-tech-graph` 把关键架构/流程画成静态图。
 
 ---
 
-## 仓库结构
+## 参考
 
-```text
-project-structure-viewer/
-├── SKILL.md     # skill 入口，定义触发条件和工作流
-├── generate.py  # 生成自包含 HTML 的脚本
-├── README.md    # 安装与使用说明
-└── LICENSE      # MIT license
-```
-
----
-
-## 兼容性说明
-
-这个仓库遵循 Agent Skills 的基本形态：一个包含 `SKILL.md` 的目录，可以携带脚本、参考资料和其他资源。
-
-相关文档：
-
-- [Agent Skills open standard](https://agentskills.io/)
-- [Claude Code skills](https://code.claude.com/docs/en/skills)
-- [Codex Agent Skills](https://developers.openai.com/codex/skills)
-- [OpenAI skills catalog for Codex](https://github.com/openai/skills)
+- [Agent Skills](https://agentskills.io/home)
+- [npx skills CLI](https://github.com/vercel-labs/skills)
 - [OpenCode Agent Skills](https://opencode.ai/docs/skills)
+- [Claude Code Skills](https://code.claude.com/docs/en/skills)
+- [Codex Agent Skills](https://developers.openai.com/codex/skills)
 
 ---
 

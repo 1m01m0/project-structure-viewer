@@ -5,7 +5,7 @@ generate.py — Project Structure Viewer Generator
 Scans a project directory and produces a self-contained interactive HTML file
 that renders the complete file tree as a left-to-right horizontal diagram.
 
-Usage: python3 generate.py <scanPath> <linkRoot> <outputDir>
+Usage: python3 scripts/generate.py <scanPath> <linkRoot> <outputDir>
 
 Arguments:
   scanPath   — path to scan the filesystem
@@ -23,6 +23,9 @@ IGNORE = [
     '.env', '.turbo', 'coverage', '.nyc_output',
     '.pytest_cache', '.mypy_cache', '.tox', '.ruff_cache',
     '.next', '.nuxt', '*.egg-info', '.terraform', '*.log', '.cache',
+    '.venv', 'venv', 'dist', 'build', 'target', 'vendor',
+    '.gradle', '.dart_tool', '.serverless', '.aws-sam',
+    '.build', 'DerivedData', 'Pods',
 ]
 
 
@@ -60,35 +63,71 @@ def build_tree(directory, root_dir):
 
 
 def flow_set(tree):
-    """Auto-detect key flow files for the reading guide."""
+    """Auto-detect files that are likely useful starting points."""
     files = set()
+    root_files = {
+        "readme.md", "readme.zh.md", "readme.rst", "readme.adoc",
+        "skill.md", "license",
+        "package.json", "pnpm-workspace.yaml", "turbo.json",
+        "pyproject.toml", "requirements.txt", "setup.py", "setup.cfg",
+        "go.mod", "cargo.toml", "pom.xml", "build.gradle", "settings.gradle",
+        "package.swift", "pubspec.yaml", "composer.json", "gemfile",
+        "makefile", "cmakelists.txt", "dockerfile", "docker-compose.yml",
+        "compose.yml", "compose.yaml", "agents.md", "claude.md",
+        "codex.md", "project_guide.md",
+    }
+    entry_names = {
+        "main.py", "main.go", "main.rs", "main.swift", "main.kt", "main.java",
+        "main.ts", "main.tsx", "main.js", "main.jsx", "index.ts", "index.tsx",
+        "index.js", "index.jsx", "app.py", "app.ts", "app.js", "server.py",
+        "server.ts", "server.js", "cli.py", "cli.ts", "__main__.py",
+        "manage.py", "wsgi.py", "asgi.py", "train.py", "inference.py",
+        "predict.py", "pipeline.py", "notebook.ipynb",
+    }
+    key_names = {
+        "routes.py", "routes.ts", "router.py", "router.ts", "router.tsx",
+        "middleware.py", "middleware.ts", "context.py", "context.ts",
+        "schema.py", "schema.ts", "schema.prisma", "schema.graphql",
+        "openapi.yaml", "openapi.yml", "openapi.json", "dockerfile",
+        "terraform.tf", "main.tf", "values.yaml", "chart.yaml",
+        "conftest.py", "pytest.ini", "tox.ini", "noxfile.py",
+    }
+    key_dirs = {
+        ".github", "src", "app", "lib", "cmd", "internal", "pkg", "crates",
+        "packages", "apps", "services", "api", "cli", "server", "client",
+        "core", "domain", "models", "schemas", "migrations", "notebooks",
+        "infra", "deploy", "k8s", "helm", "docs", "tests", "test",
+        "scripts", "references", "agents",
+    }
 
     def walk(nodes):
         for nd in nodes:
             p = nd["p"]
             name = nd["n"]
-            if nd["t"] == "f" and "/" not in p:
-                if name in ("package.json", "tsconfig.json", "Dockerfile",
-                            "Makefile", "Cargo.toml", "go.mod", "pyproject.toml",
-                            "Gemfile", "build.gradle", "pom.xml",
-                            "pnpm-workspace.yaml", "lerna.json",
-                            "AGENTS.md", "CLAUDE.md", "README.md", "PROJECT_GUIDE.md"):
+            lower_name = name.lower()
+            lower_path = p.lower()
+            parts = set(lower_path.split("/"))
+            if nd["t"] == "f":
+                if "/" not in p and lower_name in root_files:
                     files.add(p)
-            if name in ("main.tsx", "main.ts", "index.tsx", "index.ts",
-                        "App.tsx", "App.ts", "boot.ts", "boot.js",
-                        "server.ts", "server.js", "app.ts", "app.js",
-                        "index.html", "_app.tsx", "_app.ts",
-                        "layout.tsx", "layout.ts"):
-                files.add(p)
-            if name in ("router.ts", "router.tsx", "routes.ts", "routes.tsx",
-                        "middleware.ts", "middleware.tsx",
-                        "context.ts", "context.tsx"):
-                files.add(p)
-            if name in ("schema.ts", "schema.prisma", "types.ts", "types.d.ts"):
-                files.add(p)
-            if "pages" in p or "routes" in p or "views" in p:
-                if nd["t"] == "f" and not p.endswith((".css", ".scss", ".less", ".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx")):
+                if lower_name in entry_names or lower_name in key_names:
                     files.add(p)
+                if lower_path.startswith(".github/workflows/") and lower_name.endswith((".yml", ".yaml")):
+                    files.add(p)
+                if parts & key_dirs:
+                    if lower_name in key_names or lower_name.endswith((
+                        ".proto", ".graphql", ".graphqls", ".sql", ".tf",
+                        ".ipynb", ".md", ".rst", ".yaml", ".yml",
+                    )):
+                        files.add(p)
+                if "scripts" in parts and lower_name.endswith((".py", ".sh", ".ts", ".js", ".mjs")):
+                    files.add(p)
+                if any(seg in parts for seg in ("pages", "routes", "views", "screens")):
+                    if not lower_name.endswith((
+                        ".css", ".scss", ".less", ".test.ts", ".test.tsx",
+                        ".spec.ts", ".spec.tsx",
+                    )):
+                        files.add(p)
             if nd["t"] == "d":
                 walk(nd.get("c", []))
     walk(tree)
@@ -187,83 +226,116 @@ const T = {
   }
 };
 
-// File role descriptions (keyed by pattern)
+// File role descriptions (keyed by broad project patterns)
 function descFile(p, n, lang) {
   const nm = n.toLowerCase(); const pp = p.toLowerCase();
-  const zh = {
-    'package.json':'项目清单 — 依赖、脚本、元信息',
+    const zh = {
+    'readme.md':'项目入口文档 — 说明用途、安装和主要工作流',
+    'readme.zh.md':'中文项目入口文档',
+    'skill.md':'Agent Skill 入口 — 定义触发条件、工作流和资源导航',
+    'license':'许可证 — 说明复用和分发条件',
+    'package.json':'JavaScript/TypeScript 项目清单 — 依赖、脚本、元信息',
+    'pyproject.toml':'Python 项目清单 — 构建系统、依赖和工具配置',
+    'requirements.txt':'Python 依赖清单',
+    'setup.py':'Python 包安装入口',
+    'go.mod':'Go 模块清单 — 模块路径和依赖版本',
+    'cargo.toml':'Rust 包清单 — crate 元信息、依赖和构建配置',
+    'pom.xml':'Maven 项目清单 — Java/Kotlin 依赖和构建生命周期',
+    'build.gradle':'Gradle 构建脚本',
+    'package.swift':'Swift Package Manager 清单',
+    'pubspec.yaml':'Dart/Flutter 项目清单',
+    'composer.json':'PHP Composer 项目清单',
+    'gemfile':'Ruby Bundler 依赖清单',
     'tsconfig.json':'TypeScript 编译配置',
     'dockerfile':'容器镜像 — 定义生产运行环境',
-    '.env.example':'环境变量模板 — 列出所有需配置的密钥和地址',
+    'docker-compose.yml':'本地或多服务编排配置',
+    'compose.yaml':'本地或多服务编排配置',
+    '.env.example':'环境变量模板 — 列出需要配置的变量',
     'pnpm-workspace.yaml':'Monorepo 工作区定义 — 声明子包位置',
     '.gitignore':'Git 忽略规则',
-    'eslint.config.js':'ESLint 代码规范配置',
-    'vite.config.ts':'Vite 构建配置 — 插件、代理、路径别名',
-    'tailwind.config.js':'Tailwind CSS 主题和设计令牌配置',
+    'makefile':'常用开发、构建和发布命令入口',
+    'cmakelists.txt':'C/C++ CMake 构建配置',
+    'openapi.yaml':'OpenAPI 接口契约',
+    'openapi.yml':'OpenAPI 接口契约',
+    'openapi.json':'OpenAPI 接口契约',
+    'openai.yaml':'Agent UI 元数据 — 显示名称、简介和默认提示',
   };
   if (zh[nm]) return zh[nm];
   if (zh[pp]) return zh[pp];
-  // Pattern-based
-  if (/(^|\/)main\.(tsx?|jsx?)$/.test(p)) return 'React 应用入口 — 挂载根组件，初始化 Provider 和路由';
-  if (/(^|\/)index\.html$/.test(p)) return 'SPA 入口 HTML — 浏览器首先加载此页面';
-  if (/(^|\/)App\.(tsx?|jsx?)$/.test(p)) return '根组件 — 定义路由表和全局布局';
-  if (/(^|\/)boot\.(ts|js)$/.test(p)||/(^|\/)server\.(ts|js)$/.test(p)||/(^|\/)app\.(ts|js)$/.test(p)) return '服务端入口 — 启动 HTTP 服务，注册中间件和路由';
-  if (/router/i.test(nm)) return '路由定义 — 将 URL 路径映射到处理函数，组织 API 端点';
-  if (/middleware/i.test(nm)) return '请求中间件 — 身份认证、权限校验、日志记录';
-  if (/schema/i.test(nm)&&!/json/i.test(nm)) return '数据库模型 — 定义表结构、字段类型和关联关系';
-  if (/context/i.test(nm)) return '请求上下文 — 从请求头解析用户身份和会话信息';
-  if (/auth/i.test(nm)) return '认证模块 — 处理用户登录、token 签发与验证';
-  if (/(pages|views|screens)\//.test(p)) return '页面组件 — 对应一个前端路由的完整视图';
-  if (/(components|ui)\//.test(p)&&!/node_modules/.test(p)) return 'UI 组件 — 可复用的界面元素';
-  if (/hooks\//.test(p)) return '自定义 Hook — 封装可复用的状态逻辑';
-  if (/lib\//.test(p)||/utils\//.test(p)) return '工具函数 — 通用辅助逻辑';
-  if (/providers?\//.test(p)) return 'Context Provider — 为子树注入全局状态或服务';
-  if (/queries?\//.test(p)) return '数据查询 — 封装数据库读写操作';
-  if (/contracts?\//.test(p)||/\/types\.(ts|d\.ts)$/.test(p)) return '类型定义 — 共享接口、枚举和类型契约';
-  if (/i18n\//.test(p)||/locales?\//.test(p)) return '国际化 — 多语言翻译文本';
-  if (/\.(test|spec)\.(tsx?|jsx?)$/.test(p)) return '测试文件 — 单元测试或集成测试';
-  if (/deploy/i.test(p)) return '部署脚本 — 自动化发布和上线流程';
-  if (/docker/i.test(p)||/nginx/i.test(p)) return '运维配置 — 容器编排或反向代理规则';
-  if (/\.md$/i.test(p)) return '项目文档';
+  if (/(^|\/)(main|index|app|server|cli|manage|__main__|wsgi|asgi|train|predict|inference|pipeline)\.(py|go|rs|swift|kt|java|tsx?|jsx?|rb|php|exs?)$/.test(pp)) return '运行入口 — 启动应用、命令行、服务或核心任务';
+  if (/^scripts\/.+\.(py|sh|ts|js|mjs)$/.test(pp)) return '辅助脚本 — 自动化生成、验证、迁移或维护任务';
+  if (/(^|\/)index\.html$/.test(pp)) return '浏览器入口 HTML — 声明页面挂载点和资源加载';
+  if (/\.github\/workflows\/.+\.ya?ml$/.test(pp)) return 'CI/CD 工作流 — 自动化测试、构建或发布';
+  if (/docker|compose|nginx|caddy/i.test(pp)) return '运行环境配置 — 容器、代理或本地编排';
+  if (/terraform|\.tf$|helm|k8s|kubernetes|deploy|infra/i.test(pp)) return '基础设施/部署配置 — 描述运行环境和发布资源';
+  if (/router|routes?|controller|handler|endpoint/i.test(pp)) return '接口适配层 — 暴露路由、命令、事件或外部入口';
+  if (/middleware|interceptor|filter/i.test(pp)) return '中间层 — 处理认证、日志、校验、权限或请求包装';
+  if (/schema|model|entity|migration|\.sql$|\.prisma$|\.proto$|graphql/i.test(pp)) return '数据契约/模型 — 定义持久化结构、消息格式或接口类型';
+  if (/context|provider|container|registry/i.test(pp)) return '上下文/装配层 — 连接依赖、配置或运行时服务';
+  if (/auth|permission|policy|session/i.test(pp)) return '身份与权限相关逻辑';
+  if (/(pages|views|screens|components|ui)\//.test(pp)) return '用户界面层 — 页面、视图或可复用 UI 单元';
+  if (/(cmd|bin)\//.test(pp)) return '命令行入口或可执行命令';
+  if (/(core|domain|internal|pkg|lib|src)\//.test(pp)) return '核心实现模块 — 项目的主要业务或库逻辑';
+  if (/(notebooks?|experiments?)\//.test(pp)||/\.ipynb$/.test(pp)) return '探索/分析笔记本 — 实验、数据分析或模型验证';
+  if (/(tests?|spec|fixtures?)\//.test(pp)||/\.(test|spec)\./.test(pp)||/conftest\.py$/.test(pp)) return '验证资产 — 测试、样例数据或测试夹具';
+  if (/(docs?|examples?)\//.test(pp)||/\.(md|rst|adoc)$/i.test(pp)) return '文档/示例 — 解释概念、使用方式或设计背景';
+  if (/\.(ya?ml|toml|json|ini|cfg|conf)$/i.test(pp)) return '配置文件 — 控制工具、运行时或项目约定';
   return '';
 }
 
 function descFileEn(p, n) {
   const nm = n.toLowerCase(); const pp = p.toLowerCase();
-  const en = {
-    'package.json':'Project manifest — dependencies, scripts, metadata',
+    const en = {
+    'readme.md':'Project entry document — purpose, setup, and primary workflows',
+    'readme.zh.md':'Chinese project entry document',
+    'skill.md':'Agent Skill entry — triggers, workflow, and resource navigation',
+    'license':'License — reuse and distribution terms',
+    'package.json':'JavaScript/TypeScript manifest — dependencies, scripts, metadata',
+    'pyproject.toml':'Python project manifest — build system, dependencies, tooling',
+    'requirements.txt':'Python dependency list',
+    'setup.py':'Python package installation entry',
+    'go.mod':'Go module manifest — module path and dependency versions',
+    'cargo.toml':'Rust package manifest — crate metadata, dependencies, build config',
+    'pom.xml':'Maven manifest — Java/Kotlin dependencies and build lifecycle',
+    'build.gradle':'Gradle build script',
+    'package.swift':'Swift Package Manager manifest',
+    'pubspec.yaml':'Dart/Flutter project manifest',
+    'composer.json':'PHP Composer manifest',
+    'gemfile':'Ruby Bundler dependency manifest',
     'tsconfig.json':'TypeScript compiler configuration',
     'dockerfile':'Container image — defines production runtime',
-    '.env.example':'Environment template — lists all required secrets and URLs',
+    'docker-compose.yml':'Local or multi-service orchestration config',
+    'compose.yaml':'Local or multi-service orchestration config',
+    '.env.example':'Environment template — lists required variables',
     'pnpm-workspace.yaml':'Monorepo workspace — declares sub-package locations',
     '.gitignore':'Git ignore rules',
-    'eslint.config.js':'ESLint code style configuration',
-    'vite.config.ts':'Vite build config — plugins, proxy, path aliases',
-    'tailwind.config.js':'Tailwind CSS theme and design tokens',
+    'makefile':'Common development, build, and release command entry',
+    'cmakelists.txt':'C/C++ CMake build configuration',
+    'openapi.yaml':'OpenAPI interface contract',
+    'openapi.yml':'OpenAPI interface contract',
+    'openapi.json':'OpenAPI interface contract',
+    'openai.yaml':'Agent UI metadata — display name, summary, and default prompt',
   };
   if (en[nm]) return en[nm];
   if (en[pp]) return en[pp];
-  if (/(^|\/)main\.(tsx?|jsx?)$/.test(p)) return 'React entry point — mounts root, initializes providers and router';
-  if (/(^|\/)index\.html$/.test(p)) return 'SPA entry HTML — the first page the browser loads';
-  if (/(^|\/)App\.(tsx?|jsx?)$/.test(p)) return 'Root component — defines route table and global layout';
-  if (/(^|\/)boot\.(ts|js)$/.test(p)||/(^|\/)server\.(ts|js)$/.test(p)||/(^|\/)app\.(ts|js)$/.test(p)) return 'Server entry — starts HTTP server, registers middleware and routes';
-  if (/router/i.test(nm)) return 'Route definitions — maps URL paths to handlers, organizes API endpoints';
-  if (/middleware/i.test(nm)) return 'Request middleware — authentication, authorization, logging';
-  if (/schema/i.test(nm)&&!/json/i.test(nm)) return 'Database schema — defines table structure, column types, and relations';
-  if (/context/i.test(nm)) return 'Request context — resolves user identity and session from headers';
-  if (/auth/i.test(nm)) return 'Auth module — handles login, token issuance and verification';
-  if (/(pages|views|screens)\//.test(p)) return 'Page component — complete view for a frontend route';
-  if (/(components|ui)\//.test(p)&&!/node_modules/.test(p)) return 'UI component — reusable interface element';
-  if (/hooks\//.test(p)) return 'Custom hook — encapsulates reusable state logic';
-  if (/lib\//.test(p)||/utils\//.test(p)) return 'Utility — shared helper functions';
-  if (/providers?\//.test(p)) return 'Context provider — injects global state or service into subtree';
-  if (/queries?\//.test(p)) return 'Data query — encapsulates database read/write operations';
-  if (/contracts?\//.test(p)||/\/types\.(ts|d\.ts)$/.test(p)) return 'Type definitions — shared interfaces, enums, and type contracts';
-  if (/i18n\//.test(p)||/locales?\//.test(p)) return 'Internationalization — multi-language translation texts';
-  if (/\.(test|spec)\.(tsx?|jsx?)$/.test(p)) return 'Test file — unit or integration test';
-  if (/deploy/i.test(p)) return 'Deployment script — automates release and rollout';
-  if (/docker/i.test(p)||/nginx/i.test(p)) return 'Ops config — container orchestration or reverse proxy rules';
-  if (/\.md$/i.test(p)) return 'Documentation';
+  if (/(^|\/)(main|index|app|server|cli|manage|__main__|wsgi|asgi|train|predict|inference|pipeline)\.(py|go|rs|swift|kt|java|tsx?|jsx?|rb|php|exs?)$/.test(pp)) return 'Runtime entry — starts an app, CLI, service, or core task';
+  if (/^scripts\/.+\.(py|sh|ts|js|mjs)$/.test(pp)) return 'Helper script — automates generation, validation, migration, or maintenance tasks';
+  if (/(^|\/)index\.html$/.test(pp)) return 'Browser entry HTML — declares mount point and loaded assets';
+  if (/\.github\/workflows\/.+\.ya?ml$/.test(pp)) return 'CI/CD workflow — automates tests, builds, or releases';
+  if (/docker|compose|nginx|caddy/i.test(pp)) return 'Runtime environment config — containers, proxy, or local orchestration';
+  if (/terraform|\.tf$|helm|k8s|kubernetes|deploy|infra/i.test(pp)) return 'Infrastructure/deployment config — describes runtime resources and rollout';
+  if (/router|routes?|controller|handler|endpoint/i.test(pp)) return 'Interface adapter — exposes routes, commands, events, or external entry points';
+  if (/middleware|interceptor|filter/i.test(pp)) return 'Middleware layer — authentication, logging, validation, permissioning, or request wrapping';
+  if (/schema|model|entity|migration|\.sql$|\.prisma$|\.proto$|graphql/i.test(pp)) return 'Data contract/model — persistence structure, message format, or interface type';
+  if (/context|provider|container|registry/i.test(pp)) return 'Context/composition layer — wires dependencies, configuration, or runtime services';
+  if (/auth|permission|policy|session/i.test(pp)) return 'Identity and permission logic';
+  if (/(pages|views|screens|components|ui)\//.test(pp)) return 'User interface layer — pages, screens, views, or reusable UI units';
+  if (/(cmd|bin)\//.test(pp)) return 'Command-line entry or executable command';
+  if (/(core|domain|internal|pkg|lib|src)\//.test(pp)) return 'Core implementation module — main product, domain, or library logic';
+  if (/(notebooks?|experiments?)\//.test(pp)||/\.ipynb$/.test(pp)) return 'Exploration/analysis notebook — experiment, data analysis, or model validation';
+  if (/(tests?|spec|fixtures?)\//.test(pp)||/\.(test|spec)\./.test(pp)||/conftest\.py$/.test(pp)) return 'Validation asset — tests, sample data, or fixtures';
+  if (/(docs?|examples?)\//.test(pp)||/\.(md|rst|adoc)$/i.test(pp)) return 'Documentation/example — concepts, usage, or design background';
+  if (/\.(ya?ml|toml|json|ini|cfg|conf)$/i.test(pp)) return 'Configuration file — controls tools, runtime, or project conventions';
   return '';
 }
 

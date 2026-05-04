@@ -1,0 +1,33 @@
+{
+  "name": "@1m01m0/project-structure-viewer",
+  "version": "0.2.0",
+  "description": "Agent Skill that generates an interactive HTML structure map for any project directory.",
+  "main": "SKILL.md",
+  "keywords": [
+    "agent-skill",
+    "claude-code",
+    "codex",
+    "opencode",
+    "project-structure",
+    "codebase-map",
+    "repository-visualization"
+  ],
+  "author": "1m01m0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/1m01m0/project-structure-viewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/1m01m0/project-structure-viewer/issues"
+  },
+  "homepage": "https://github.com/1m01m0/project-structure-viewer#readme",
+  "files": [
+    "SKILL.md",
+    "README.md",
+    "LICENSE",
+    "agents/",
+    "references/",
+    "scripts/"
+  ]
+}

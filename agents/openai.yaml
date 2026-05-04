@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Structure Viewer"
+  short_description: "Map a project into an interactive HTML tree"
+  default_prompt: "Use $project-structure-viewer to generate an interactive structure map for this repository."
