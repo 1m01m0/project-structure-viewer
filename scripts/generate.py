@@ -14,7 +14,6 @@ Arguments:
 """
 
 import os, sys, json, fnmatch, html as html_mod
-from datetime import datetime
 
 IGNORE = [
     'node_modules', '.git', '__pycache__', '.pnpm',
@@ -134,31 +133,40 @@ def flow_set(tree):
     return files
 
 
-def escape_json_str(s):
-    return s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+def script_json(value):
+    """Serialize JSON safely for an inline <script> block."""
+    return (json.dumps(value, ensure_ascii=False)
+            .replace("<", "\\u003c")
+            .replace(">", "\\u003e")
+            .replace("&", "\\u0026")
+            .replace("\u2028", "\\u2028")
+            .replace("\u2029", "\\u2029"))
 
 
 CSS = r'''
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#000;color:#ccc;overflow:hidden;height:100vh;width:100vw;display:flex;flex-direction:column}
-.guide-panel{background:#0a0a0a;border-bottom:1px solid #222;max-height:40vh;overflow-y:auto;flex-shrink:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#000;color:#ccc;overflow:hidden;height:100vh;width:100vw;display:flex;flex-direction:row}
+.guide-panel{background:#0a0a0a;border-right:1px solid #222;width:340px;min-width:340px;height:100vh;overflow-y:auto;flex-shrink:0;transition:width .25s,min-width .25s}
+.guide-panel.collapsed{width:48px;min-width:48px;overflow:hidden}
 .guide-panel.collapsed .guide-body{display:none}
-.guide-header{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;user-select:none;position:sticky;top:0;background:#0a0a0a;z-index:5}
+.guide-panel.collapsed .guide-header h2,.guide-panel.collapsed #guideHint{display:none}
+.guide-panel.collapsed .guide-header .arrow{font-size:16px}
+.guide-header{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;user-select:none;position:sticky;top:0;background:#0a0a0a;z-index:5}
 .guide-header:hover{background:#111}
-.guide-header .arrow{transition:transform .2s;font-size:11px;color:#666}
-.guide-header.collapsed .arrow{transform:rotate(-90deg)}
-.guide-header h2{font-size:14px;color:#e0e0e0;display:flex;align-items:center;gap:8px}
-.guide-header h2 .badge{font-size:10px;background:#222;color:#999;padding:2px 8px;border-radius:10px;font-weight:400}
-.guide-body{padding:0 20px 16px;display:flex;gap:16px;flex-wrap:wrap}
-.flow-col{flex:1;min-width:260px;max-width:420px}
-.flow-col h3{font-size:12px;color:#999;margin-bottom:8px;font-weight:500}
-.flow-step{display:flex;gap:8px;padding:4px 0;font-size:11px;align-items:flex-start;line-height:1.5}
-.flow-step .num{flex-shrink:0;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000;background:#555}
-.flow-step .file{color:#aaa;cursor:pointer;font-family:monospace;font-size:10px;word-break:break-all}
+.guide-header .arrow{transition:transform .2s;font-size:11px;color:#666;flex-shrink:0}
+.guide-header.collapsed .arrow{transform:rotate(180deg)}
+.guide-header h2{font-size:13px;color:#e0e0e0;display:flex;align-items:center;gap:6px;overflow:hidden}
+.guide-header h2 .badge{font-size:9px;background:#222;color:#999;padding:2px 6px;border-radius:8px;font-weight:400;white-space:nowrap}
+.guide-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:14px}
+.flow-col h3{font-size:11px;color:#999;margin-bottom:6px;font-weight:500}
+.flow-step{display:flex;gap:6px;padding:3px 0;font-size:10px;align-items:flex-start;line-height:1.4}
+.flow-step .num{flex-shrink:0;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000;background:#555}
+.flow-step .file{color:#aaa;cursor:pointer;font-family:monospace;font-size:9px;word-break:break-all}
 .flow-step .file:hover{color:#fff;text-decoration:underline}
-.flow-step .desc{color:#666;font-size:10px}
-.flow-note{font-size:10px;color:#666;margin-top:8px;padding:10px 12px;background:#0d0d0d;border-radius:6px;line-height:1.7}
+.flow-step .desc{color:#666;font-size:9px}
+.flow-note{font-size:9px;color:#666;margin-top:6px;padding:8px 10px;background:#0d0d0d;border-radius:5px;line-height:1.6}
 .flow-note b{color:#ccc}
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .topbar{background:#0a0a0a;border-bottom:1px solid #222;padding:7px 16px;display:flex;align-items:center;gap:10px;z-index:200;flex-shrink:0}
 .topbar h1{font-size:13px;color:#ddd;white-space:nowrap}
 .topbar .spacer{flex:1}
@@ -201,7 +209,7 @@ svg.lns{position:absolute;top:0;left:0;pointer-events:none;z-index:1}
 
 JS = r'''
 const DATA = __DATA__;
-const PROOT = '__LINKROOT__/';
+const PROOT = __LINKROOT__;
 const FLOW = new Set(__FLOW__);
 const NW = 200, NH = 30, LG = 78, NG = 4;
 let els = [], sc = 1, exp = new Set(), sq = '';
@@ -210,7 +218,7 @@ let LANG = 'zh';
 const T = {
   zh: {
     guideTitle:'📖 阅读路线图',guideBadge:'从哪里开始看？',
-    guideHint:'点击收起 · 树中灰框节点 = 流程关键文件',
+    guideHint:'点击收起侧栏 · 灰框 = 关键文件',
     searchPlaceholder:'🔍 搜索文件...',
     btnExpand:'📂 全部展开',btnCollapse:'📁 全部收起',btnReset:'🔄 重置',
     noMatch:'无匹配文件',more:'...还有 ',more2:' 个匹配',
@@ -229,7 +237,7 @@ const T = {
 // File role descriptions (keyed by broad project patterns)
 function descFile(p, n, lang) {
   const nm = n.toLowerCase(); const pp = p.toLowerCase();
-    const zh = {
+  const zh = {
     'readme.md':'项目入口文档 — 说明用途、安装和主要工作流',
     'readme.zh.md':'中文项目入口文档',
     'skill.md':'Agent Skill 入口 — 定义触发条件、工作流和资源导航',
@@ -285,7 +293,7 @@ function descFile(p, n, lang) {
 
 function descFileEn(p, n) {
   const nm = n.toLowerCase(); const pp = p.toLowerCase();
-    const en = {
+  const en = {
     'readme.md':'Project entry document — purpose, setup, and primary workflows',
     'readme.zh.md':'Chinese project entry document',
     'skill.md':'Agent Skill entry — triggers, workflow, and resource navigation',
@@ -347,27 +355,8 @@ const GUIDE = {
   en: '<div class="flow-col"><h3>📋 Key Files</h3><div class="flow-note">Replace this placeholder with a phase-based guide after reading the project files.</div></div>'
 };
 
-function mkS(n,p,d){return '<div class="flow-step"><span class="num">'+n+'</span><div><span class="file" onclick="navTo(\''+esc2(p)+'\')">'+esc2(p)+'</span><div class="desc">'+d+'</div></div></div>';}
-function mkE(n,p,d){return '<div class="flow-step"><span class="num">'+n+'</span><div><span class="file" onclick="navTo(\''+esc2(p)+'\')">'+esc2(p)+'</span><div class="desc">'+d+'</div></div></div>';}
-
-function buildGuide(nodes, lang) {
-  const keyFiles = [];
-  function walk(ns) { for (const n of ns) { if (FLOW.has(n.p) && n.t === 'f') keyFiles.push(n); if (n.c) walk(n.c); } }
-  walk(nodes);
-  keyFiles.sort((a,b) => a.p.split('/').length - b.p.split('/').length || a.p.localeCompare(b.p));
-  const shown = keyFiles.slice(0, 10);
-  let html = '';
-  shown.forEach((f, i) => {
-    const desc = lang==='zh' ? descFile(f.p, f.n, 'zh') : descFileEn(f.p, f.n);
-    const sz = f.s ? fmt(f.s) : '';
-    html += '<div class="flow-step"><span class="num">'+(i+1)+'</span><div><span class="file" onclick="navTo(\''+esc2(f.p)+'\')">'+esc2(f.p)+'</span>'+(desc?'<div class="desc">'+esc2(desc)+'</div>':'')+(sz?'<div class="desc" style="color:#444">'+sz+'</div>':'')+'</div></div>';
-  });
-  if (keyFiles.length > 10) {
-    const more = lang==='zh' ? '...还有 '+(keyFiles.length-10)+' 个关键文件，使用搜索框查找' : '...and '+(keyFiles.length-10)+' more key files. Use search to find them';
-    html += '<div class="flow-step"><span class="num">+</span><div class="desc">'+more+'</div></div>';
-  }
-  return html;
-}
+function mkS(n,p,d){return '<div class="flow-step"><span class="num">'+n+'</span><div><span class="file" data-p="'+escAttr(p)+'" onclick="navTo(this.dataset.p)">'+esc2(p)+'</span><div class="desc">'+esc2(d)+'</div></div></div>';}
+function mkE(n,p,d){return '<div class="flow-step"><span class="num">'+n+'</span><div><span class="file" data-p="'+escAttr(p)+'" onclick="navTo(this.dataset.p)">'+esc2(p)+'</span><div class="desc">'+esc2(d)+'</div></div></div>';}
 
 function toggleLang() {
   LANG = LANG === 'zh' ? 'en' : 'zh';
@@ -432,7 +421,7 @@ function render() {
     if(FLOW.has(f.n.p))cls+=' flow';
     el.className=cls;el.style.left=x+'px';el.style.top=y+'px';el.dataset.path=f.n.p;el.dataset.type=f.n.t;
     if(f.n.t==='d'){el.innerHTML='<span class="ico">'+(f.open?'📂':'📁')+'</span><span class="ni">'+esc2(f.n.n)+'</span>';if((f.n.c||[]).length>0)el.addEventListener('click',e=>{e.stopPropagation();if(exp.has(f.n.p))exp.delete(f.n.p);else exp.add(f.n.p);render();});}
-    else{el.innerHTML='<span class="ico">📄</span><span class="ni">'+esc2(f.n.n)+'</span>'+(f.n.s?'<span class="sz">'+fmt(f.n.s)+'</span>':'');el.addEventListener('click',e=>{e.stopPropagation();window.open('file://'+PROOT+f.n.p,'_blank');});el.addEventListener('mouseenter',e=>showTT(e,f.n));el.addEventListener('mouseleave',hideTT);}
+    else{el.innerHTML='<span class="ico">📄</span><span class="ni">'+esc2(f.n.n)+'</span>'+(f.n.s?'<span class="sz">'+fmt(f.n.s)+'</span>':'');el.addEventListener('click',e=>{e.stopPropagation();window.open(fileUrl(f.n.p),'_blank');});el.addEventListener('mouseenter',e=>showTT(e,f.n));el.addEventListener('mouseleave',hideTT);}
     ca.appendChild(el);els.push(el);
   }
   updateHL();
@@ -440,7 +429,41 @@ function render() {
 function buildIndex(nodes){const idx=[];for(const n of nodes){if(n.t==='f')idx.push({name:n.n,path:n.p,size:n.s});if(n.c)idx.push(...buildIndex(n.c));}return idx;}
 const fileIndex=buildIndex(DATA);
 function search(){sq=document.getElementById('q').value.toLowerCase().trim();updateHL();updateDropdown();}
-function updateDropdown(){const dd=document.getElementById('srdrop'),t=T[LANG];if(!sq||sq.length<1){dd.classList.remove('show');return;}const matches=fileIndex.filter(f=>f.path.toLowerCase().includes(sq));const MAX=30;if(matches.length===0){dd.innerHTML='<div class="sr-empty">'+t.noMatch+'</div>';}else{const shown=matches.slice(0,MAX);dd.innerHTML=shown.map(f=>'<div class="sr-item" onmousedown="navTo(\''+esc2(f.path)+'\');document.getElementById(\'srdrop\').classList.remove(\'show\')"><span class="sr-name">'+esc2(f.name)+'</span><span class="sr-path">'+esc2(f.path)+'</span></div>').join('')+(matches.length>MAX?'<div class="sr-more">'+t.more+(matches.length-MAX)+t.more2+'</div>':'');}dd.classList.add('show');}
+function updateDropdown(){
+  const dd=document.getElementById('srdrop'),t=T[LANG];
+  if(!sq||sq.length<1){dd.classList.remove('show');dd.innerHTML='';return;}
+  const matches=fileIndex.filter(f=>f.path.toLowerCase().includes(sq));
+  const MAX=30;
+  dd.innerHTML='';
+  if(matches.length===0){
+    const empty=document.createElement('div');
+    empty.className='sr-empty';
+    empty.textContent=t.noMatch;
+    dd.appendChild(empty);
+  }else{
+    matches.slice(0,MAX).forEach(f=>{
+      const item=document.createElement('div');
+      item.className='sr-item';
+      item.addEventListener('mousedown',e=>{e.preventDefault();navTo(f.path);dd.classList.remove('show');});
+      const name=document.createElement('span');
+      name.className='sr-name';
+      name.textContent=f.name;
+      const path=document.createElement('span');
+      path.className='sr-path';
+      path.textContent=f.path;
+      item.appendChild(name);
+      item.appendChild(path);
+      dd.appendChild(item);
+    });
+    if(matches.length>MAX){
+      const more=document.createElement('div');
+      more.className='sr-more';
+      more.textContent=t.more+(matches.length-MAX)+t.more2;
+      dd.appendChild(more);
+    }
+  }
+  dd.classList.add('show');
+}
 function updateHL(){if(!sq){els.forEach(e=>e.classList.remove('dim','hl'));return;}els.forEach(e=>{const p=(e.dataset.path||'').toLowerCase();if(p.includes(sq)){e.classList.remove('dim');e.classList.add('hl');}else{e.classList.add('dim');e.classList.remove('hl');}});}
 function showTT(e,nd){const t=document.getElementById('tt');t.innerHTML='<div>'+esc2(nd.n)+'</div><div class="p">'+esc2(nd.p)+'</div>';t.style.display='block';t.style.left=(e.clientX+14)+'px';t.style.top=(e.clientY-8)+'px';}
 function hideTT(){document.getElementById('tt').style.display='none';}
@@ -457,6 +480,16 @@ function resetView(){sc=1;px=0;py=0;applyT();document.getElementById('q').value=
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='f'){e.preventDefault();document.getElementById('q').focus();}if(e.key==='Escape'){document.getElementById('q').value='';sq='';updateHL();document.getElementById('srdrop').classList.remove('show');}if(e.key==='0'&&(e.ctrlKey||e.metaKey)){e.preventDefault();resetView();}});
 function fmt(b){if(!b)return'';const u=['B','KB','MB','GB'];let s=b,i=0;while(s>=1024&&i<u.length-1){s/=1024;i++;}return i===0?s+' B':s.toFixed(1)+' '+u[i];}
 function esc2(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function escAttr(s){return esc2(s).replace(/"/g,'&quot;');}
+function fileUrl(p){
+  const root=PROOT.replace(/\/+$/,'');
+  const full=root+'/'+p;
+  return 'file://'+full.split('/').map((seg,i)=>{
+    if(i===0)return seg;
+    const enc=encodeURIComponent(seg);
+    return /^[A-Za-z]%3A$/.test(enc)?seg:enc;
+  }).join('/');
+}
 applyLang();render();
 '''
 
@@ -476,6 +509,7 @@ HTML_TEMPLATE = r'''<!DOCTYPE html>
 </div>
 <div class="guide-body" id="guideBody"></div>
 </div>
+<div class="main-area">
 <div class="topbar">
   <h1>📂 __TITLE__</h1>
   <span class="spacer"></span>
@@ -492,6 +526,7 @@ HTML_TEMPLATE = r'''<!DOCTYPE html>
   <div class="canvas" id="canvas"><svg class="lns" id="svgl"></svg></div>
   <div class="zm" id="zm">100%</div>
 </div>
+</div>
 <div class="tt" id="tt"></div>
 <script>__JS__</script>
 </body>
@@ -504,15 +539,15 @@ def generate(scan_path, link_root, output_dir):
     print(f'Scanning: {scan_path}')
     tree = build_tree(scan_path, scan_path)
     fl = flow_set(tree)
-    flow_json = json.dumps(sorted(fl), ensure_ascii=False)
-    tree_json = json.dumps(tree, ensure_ascii=False)
+    flow_json = script_json(sorted(fl))
+    tree_json = script_json(tree)
 
     file_count = sum(1 for _ in _walk_files(tree))
     dir_count = sum(1 for _ in _walk_dirs(tree))
     print(f'{dir_count} dirs, {file_count} files')
 
     js = JS.replace('__DATA__', tree_json)
-    js = js.replace('__LINKROOT__', escape_json_str(link_root.rstrip('/')))
+    js = js.replace('__LINKROOT__', script_json(link_root.rstrip('/')))
     js = js.replace('__FLOW__', flow_json)
 
     html = HTML_TEMPLATE.replace('__CSS__', CSS.strip())
