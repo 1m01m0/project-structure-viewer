@@ -351,8 +351,8 @@ function descFileEn(p, n) {
 // Replace with phase-based hardcoded content using mkS() / mkE().
 // Example: mkS(1,'path/to/file.ts','Description in Chinese')
 const GUIDE = {
-  zh: '<div class="flow-col"><h3>📋 Key Files</h3><div class="flow-note">Replace this placeholder with a phase-based guide after reading the project files.</div></div>',
-  en: '<div class="flow-col"><h3>📋 Key Files</h3><div class="flow-note">Replace this placeholder with a phase-based guide after reading the project files.</div></div>'
+  zh: '<div class="flow-col"><h3>📋 关键文件</h3><div class="flow-note">Agent 尚未生成项目专属阅读路线图。请重新运行 skill，确保先阅读项目源代码再替换此占位符。阶段格式参考：<br><br>🔷 阶段一：项目概览 (N)<br>🟢 阶段二：前端启动链 (N)<br>🟠 阶段三：后端请求链 (N)<br>🟣 关键流转总结<br><br>每阶段列出文件路径及中文描述，100% 覆盖所有项目文件。</div></div>',
+  en: '<div class="flow-col"><h3>📋 Key Files</h3><div class="flow-note">Agent has not generated a project-specific reading guide yet. Re-run the skill and ensure project source files are read before replacing this placeholder. Expected phase format:<br><br>🔷 Phase 1: Project Overview (N)<br>🟢 Phase 2: Frontend Chain (N)<br>🟠 Phase 3: Backend Chain (N)<br>🟣 Cross-cutting Flows<br><br>Each phase lists file paths with descriptions, covering 100% of project files.</div></div>'
 };
 
 function mkS(n,p,d){return '<div class="flow-step"><span class="num">'+n+'</span><div><span class="file" data-p="'+escAttr(p)+'" onclick="navTo(this.dataset.p)">'+esc2(p)+'</span><div class="desc">'+esc2(d)+'</div></div></div>';}
