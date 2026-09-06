@@ -1,18 +1,6 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Agent%20Skills-standard-black" alt="Agent Skills">
-  <img src="https://img.shields.io/badge/npx%20skills-installable-green" alt="npx skills">
-  <img src="https://img.shields.io/badge/Claude%20Code-compatible-blue" alt="Claude Code">
-  <img src="https://img.shields.io/badge/Codex-compatible-lightgrey" alt="Codex">
-  <img src="https://img.shields.io/badge/OpenCode-compatible-purple" alt="OpenCode">
-</p>
-
 # Project Structure Viewer
 
-一个标准 Agent Skill：让 Claude Code、Codex、OpenCode 等 coding agent 先读项目，再生成可交互的 `structure.html` 项目结构图。
-
-它不是普通脚本仓库。`SKILL.md` 是入口，`scripts/generate.py` 是 skill 自带的确定性生成器。
-
----
+Project Structure Viewer 是一个 Agent Skill，用于读取项目并生成可交互的 `structure.html` 结构图。入口是 [SKILL.md](SKILL.md)，确定性生成器位于 [scripts/generate.py](scripts/generate.py)。
 
 ## 安装
 
@@ -49,7 +37,28 @@ npx skills add 1m01m0/project-structure-viewer --list
 ~/.config/opencode/skills/project-structure-viewer/SKILL.md
 ```
 
----
+## 手动运行脚本
+
+通常不需要手动运行，agent 会按 `SKILL.md` 调用。需要调试时可以执行：
+
+```bash
+python3 scripts/generate.py <scanPath> <linkRoot> <outputDir>
+```
+
+示例：
+
+```bash
+python3 scripts/generate.py ~/my-project ~/my-project ~/my-project
+open ~/my-project/structure.html
+```
+
+参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `scanPath` | 要扫描的真实项目路径 |
+| `linkRoot` | HTML 里 `file://` 链接使用的本机路径，通常等于 `scanPath` |
+| `outputDir` | `structure.html` 输出目录，不存在时自动创建 |
 
 ## 使用
 
@@ -83,8 +92,6 @@ skill 会要求 agent：
 - `file://` 点击打开本机文件
 - 自动标记关键文件
 
----
-
 ## 标准目录结构
 
 这个仓库本身就是一个 skill 目录，符合 [Agent Skills](https://agentskills.io/home) 规范：
@@ -109,8 +116,6 @@ project-structure-viewer/
 npx skills add 1m01m0/project-structure-viewer
 ```
 
----
-
 ## 为什么更通用
 
 这个 skill 不再只围绕前后端项目组织阅读路径。它会提示 agent 根据实际仓库识别：
@@ -125,33 +130,6 @@ npx skills add 1m01m0/project-structure-viewer
 
 核心原则是：先看 manifest、入口、配置、测试、自动化和核心模块，再生成结构图。
 
----
-
-## 手动运行脚本
-
-通常不需要手动运行，agent 会按 `SKILL.md` 调用。需要调试时可以执行：
-
-```bash
-python3 scripts/generate.py <scanPath> <linkRoot> <outputDir>
-```
-
-示例：
-
-```bash
-python3 scripts/generate.py ~/my-project ~/my-project ~/my-project
-open ~/my-project/structure.html
-```
-
-参数：
-
-| 参数 | 说明 |
-| --- | --- |
-| `scanPath` | 要扫描的真实项目路径 |
-| `linkRoot` | HTML 里 `file://` 链接使用的本机路径，通常等于 `scanPath` |
-| `outputDir` | `structure.html` 输出目录，不存在时自动创建 |
-
----
-
 ## 和 fireworks-tech-graph 的关系
 
 `project-structure-viewer` 默认产出交互式 HTML 项目树，适合浏览代码库。
@@ -164,8 +142,6 @@ npx skills add yizhiyanhua-ai/fireworks-tech-graph
 
 典型组合是：先用本 skill 生成项目结构和阅读阶段，再用 `fireworks-tech-graph` 把关键架构/流程画成静态图。
 
----
-
 ## 参考
 
 - [Agent Skills](https://agentskills.io/home)
@@ -173,8 +149,6 @@ npx skills add yizhiyanhua-ai/fireworks-tech-graph
 - [OpenCode Agent Skills](https://opencode.ai/docs/skills)
 - [Claude Code Skills](https://code.claude.com/docs/en/skills)
 - [Codex Agent Skills](https://developers.openai.com/codex/skills)
-
----
 
 ## License
 
